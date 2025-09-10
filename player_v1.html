@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zip Music Player</title>
+    <!-- Tailwind CSS CDN -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>"> 
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+        }
+        .text-glow {
+            text-shadow: 0 0 5px #00aaff, 0 0 10px #00aaff, 0 0 15px #00aaff;
+        }
+        .button-glow {
+            box-shadow: 0 0 5px #00aaff;
+        }
+        .button-glow:hover {
+            box-shadow: 0 0 10px #00aaff;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="text-white flex flex-col items-center justify-center min-h-screen p-4 sm:p-8">
+
+    <div class="w-full max-w-lg bg-[#161b22] rounded-3xl p-6 md:p-10 shadow-lg border border-gray-700">
+        <h1 class="text-3xl sm:text-4xl font-bold mb-6 text-center text-glow">
+            MP3 Player
+        </h1>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-400 mb-2" for="zipFile">
+                Upload a .zip file with .mp3's
+            </label>
+            <input type="file" id="zipFile" accept=".zip" class="w-full text-sm text-gray-300
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-blue-500 file:text-white
+                hover:file:bg-blue-600 cursor-pointer">
+        </div>
+
+        <div id="player-container" class="flex flex-col items-center space-y-4">
+            <div id="album-art-container" class="relative w-48 h-48 sm:w-64 sm:h-64 rounded-xl overflow-hidden button-glow flex items-center justify-center">
+                <img id="album-art" src="https://placehold.co/256x256/1f2937/9ca3af?text=No+Album+Art" alt="Album Art" class="w-full h-full object-cover">
+                <div id="loading-spinner" class="absolute inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <h2 id="song-title" class="text-xl sm:text-2xl font-bold mt-2">No song loaded</h2>
+                <p id="song-artist" class="text-gray-400 text-sm">Waiting for a file...</p>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button id="previous-btn" class="p-2 rounded-full button-glow transition-transform bg-[#2a2f3a] text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <button id="play-btn" class="p-4 rounded-full button-glow transition-transform bg-blue-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-5.46-3.327A1 1 0 008 8.673v6.654a1 1 0 001.292.934l5.46-3.327a1 1 0 000-1.666z" />
+                    </svg>
+                </button>
+                <button id="pause-btn" class="p-4 rounded-full button-glow transition-transform bg-blue-600 text-white hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m1-8H9a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2z" />
+                    </svg>
+                </button>
+                <button id="skip-btn" class="p-2 rounded-full button-glow transition-transform bg-[#2a2f3a] text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <button id="toggle-shuffle" class="mt-4 py-2 px-4 rounded-full bg-[#2a2f3a] text-sm text-gray-300 button-glow transition-colors duration-200">
+                Shuffle Off
+            </button>
+        </div>
+
+        <div class="mt-8">
+            <h3 class="text-lg font-bold mb-4 text-center">Playback Queue</h3>
+            <ul id="song-queue" class="bg-[#1f242c] p-4 rounded-lg overflow-y-auto max-h-60 space-y-2 border border-gray-700">
+                <!-- Song list will be populated here -->
+                <li class="text-gray-500 text-center">No songs in queue.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- JSZip and jsmediatags CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
+
+    <script>
+        // Main logic for the music player
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // State variables
+            let queue = [];
+            let currentSongIndex = -1;
+            let isShuffling = false;
+            let audioElement = new Audio();
+
+            // DOM elements
+            const zipFileInput = document.getElementById('zipFile');
+            const songQueueList = document.getElementById('song-queue');
+            const playBtn = document.getElementById('play-btn');
+            const pauseBtn = document.getElementById('pause-btn');
+            const skipBtn = document.getElementById('skip-btn');
+            const previousBtn = document.getElementById('previous-btn');
+            const toggleShuffleBtn = document.getElementById('toggle-shuffle');
+            const albumArtEl = document.getElementById('album-art');
+            const songTitleEl = document.getElementById('song-title');
+            const songArtistEl = document.getElementById('song-artist');
+            const loadingSpinner = document.getElementById('loading-spinner');
+
+            // Listen for file selection
+            zipFileInput.addEventListener('change', async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                loadingSpinner.classList.remove('hidden');
+                queue = [];
+                currentSongIndex = -1;
+                songQueueList.innerHTML = '';
+                updateUI();
+
+                try {
+                    const zip = new JSZip();
+                    const content = await zip.loadAsync(file);
+
+                    const mp3Files = [];
+                    content.forEach((relativePath, zipEntry) => {
+                        if (zipEntry.name.endsWith('.mp3')) {
+                            mp3Files.push(zipEntry);
+                        }
+                    });
+
+                    if (mp3Files.length === 0) {
+                        songQueueList.innerHTML = '<li class="text-gray-500 text-center">No .mp3 files found in the zip.</li>';
+                        return;
+                    }
+                    
+                    for (const mp3File of mp3Files) {
+                        const blob = await mp3File.async('blob');
+                        const url = URL.createObjectURL(blob);
+                        
+                        // Read metadata from the MP3 file
+                        await new Promise((resolve) => {
+                            jsmediatags.read(blob, {
+                                onSuccess: function(tag) {
+                                    const metadata = tag.tags;
+                                    const title = metadata.title || mp3File.name.replace(/\.mp3$/, '');
+                                    const artist = metadata.artist || 'Unknown Artist';
+                                    let albumArt = null;
+
+                                    if (metadata.picture) {
+                                        const picture = metadata.picture;
+                                        const blob = new Blob([picture.data], { type: picture.format });
+                                        albumArt = URL.createObjectURL(blob);
+                                    }
+
+                                    queue.push({ url, title, artist, albumArt });
+                                    resolve();
+                                },
+                                onError: function() {
+                                    // If there's an error, still add the song with default info
+                                    queue.push({ url, title: mp3File.name.replace(/\.mp3$/, ''), artist: 'Unknown Artist', albumArt: null });
+                                    resolve();
+                                }
+                            });
+                        });
+                    }
+                    
+                    renderQueue();
+                    currentSongIndex = 0;
+                    playSong(currentSongIndex);
+
+                } catch (error) {
+                    console.error('Error loading or processing zip file:', error);
+                    songQueueList.innerHTML = `<li class="text-red-400 text-center">Error: ${error.message}.</li>`;
+                } finally {
+                    loadingSpinner.classList.add('hidden');
+                }
+            });
+
+            // Playback controls
+            playBtn.addEventListener('click', () => {
+                if (audioElement.src) {
+                    audioElement.play();
+                    playBtn.classList.add('hidden');
+                    pauseBtn.classList.remove('hidden');
+                } else if (queue.length > 0) {
+                    currentSongIndex = 0;
+                    playSong(currentSongIndex);
+                }
+            });
+
+            pauseBtn.addEventListener('click', () => {
+                audioElement.pause();
+                playBtn.classList.remove('hidden');
+                pauseBtn.classList.add('hidden');
+            });
+            
+            skipBtn.addEventListener('click', () => {
+                if (queue.length === 0) return;
+                let nextIndex;
+                if (isShuffling) {
+                    do {
+                        nextIndex = Math.floor(Math.random() * queue.length);
+                    } while (nextIndex === currentSongIndex); // Ensure a different song is picked
+                } else {
+                    nextIndex = (currentSongIndex + 1) % queue.length;
+                }
+                playSong(nextIndex);
+            });
+
+            previousBtn.addEventListener('click', () => {
+                if (queue.length === 0) return;
+                let prevIndex;
+                if (isShuffling) {
+                    do {
+                        prevIndex = Math.floor(Math.random() * queue.length);
+                    } while (prevIndex === currentSongIndex);
+                } else {
+                    prevIndex = (currentSongIndex - 1 + queue.length) % queue.length;
+                }
+                playSong(prevIndex);
+            });
+
+            toggleShuffleBtn.addEventListener('click', () => {
+                isShuffling = !isShuffling;
+                toggleShuffleBtn.innerText = isShuffling ? 'Shuffle On' : 'Shuffle Off';
+                toggleShuffleBtn.classList.toggle('bg-blue-600', isShuffling);
+                toggleShuffleBtn.classList.toggle('bg-[#2a2f3a]', !isShuffling);
+            });
+
+            // Song ended event
+            audioElement.addEventListener('ended', () => {
+                let nextIndex;
+                if (isShuffling) {
+                    do {
+                        nextIndex = Math.floor(Math.random() * queue.length);
+                    } while (nextIndex === currentSongIndex);
+                } else {
+                    nextIndex = (currentSongIndex + 1) % queue.length;
+                }
+                playSong(nextIndex);
+            });
+            
+            // Queue list item click handler
+            songQueueList.addEventListener('click', (event) => {
+                const li = event.target.closest('li');
+                if (li) {
+                    const index = parseInt(li.dataset.index, 10);
+                    if (!isNaN(index) && index < queue.length) {
+                        playSong(index);
+                    }
+                }
+            });
+
+            // Main playback function
+            function playSong(index) {
+                if (queue.length === 0 || index === currentSongIndex) {
+                    audioElement.play(); // Just play if already selected
+                    playBtn.classList.add('hidden');
+                    pauseBtn.classList.remove('hidden');
+                    return;
+                }
+
+                currentSongIndex = index;
+                const song = queue[currentSongIndex];
+                
+                audioElement.src = song.url;
+                audioElement.play();
+                
+                updateUI();
+                renderQueue(); // Re-render to highlight current song
+            }
+
+            // Update UI with current song info
+            function updateUI() {
+                const song = queue[currentSongIndex];
+                if (song) {
+                    songTitleEl.innerText = song.title;
+                    songArtistEl.innerText = song.artist;
+                    albumArtEl.src = song.albumArt || 'https://placehold.co/256x256/1f2937/9ca3af?text=No+Album+Art';
+                    playBtn.classList.add('hidden');
+                    pauseBtn.classList.remove('hidden');
+                } else {
+                    songTitleEl.innerText = 'No song loaded';
+                    songArtistEl.innerText = 'Waiting for a file...';
+                    albumArtEl.src = 'https://placehold.co/256x256/1f2937/9ca3af?text=No+Album+Art';
+                    playBtn.classList.remove('hidden');
+                    pauseBtn.classList.add('hidden');
+                }
+            }
+            
+            // Render the song queue
+            function renderQueue() {
+                songQueueList.innerHTML = '';
+                if (queue.length === 0) {
+                    songQueueList.innerHTML = '<li class="text-gray-500 text-center">No songs in queue.</li>';
+                    return;
+                }
+                
+                queue.forEach((song, index) => {
+                    const li = document.createElement('li');
+                    li.dataset.index = index;
+                    const isActive = index === currentSongIndex;
+                    li.classList.add(
+                        'p-3', 'rounded-lg', 'cursor-pointer', 'transition-colors', 'duration-200', 'flex', 'justify-between', 'items-center',
+                        isActive ? 'bg-blue-600' : 'hover:bg-[#2a2f3a]'
+                    );
+                    
+                    const titleAndArtist = document.createElement('span');
+                    titleAndArtist.classList.add(
+                        'text-sm', 'md:text-base',
+                        isActive ? 'font-bold' : 'text-gray-300'
+                    );
+                    titleAndArtist.innerText = `${song.title} - ${song.artist}`;
+                    li.appendChild(titleAndArtist);
+                    
+                    if (isActive) {
+                        const playingIndicator = document.createElement('span');
+                        playingIndicator.innerText = 'Now Playing';
+                        playingIndicator.classList.add('text-xs', 'font-bold', 'ml-2', 'text-white');
+                        li.appendChild(playingIndicator);
+                    }
+                    
+                    songQueueList.appendChild(li);
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>
